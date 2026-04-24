@@ -3,96 +3,2745 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>食物口味偏好小调查</title>
-    <link rel="stylesheet" href="style.css">
+    <title>宠物驱动任务处理</title>
+    <style>
+        :root {
+            --ui-font-family: Arial, sans-serif;
+            --ui-dot-gray: #8f8f8f;
+            --ui-panel-border: #ddd;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: var(--ui-font-family);
+            overflow-x: hidden; /* Only hide horizontal overflow */
+            position: relative; /* Positioning context for absolute children */
+            height: 100vh; /* Full viewport height */
+        }
+
+        .main-content-wrapper {
+            position: absolute; /* Take out of normal flow */
+            top: 0;
+            left: 0;
+            width: 100vw; /* Occupy full viewport width */
+            height: 100vh; /* Occupy full viewport height */
+            display: flex;
+            transition: transform 0.3s ease-in-out; /* Transition for sliding */
+        }
+
+        .left-panel {
+            flex-basis: 25%; /* 1/4 of main-content-wrapper */
+            background-color: #ffffff;
+            height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            min-width: 250px; /* To prevent it from becoming too small */
+            border-right: 1px solid var(--ui-panel-border); /* Use a thin line to separate task panel */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .divider {
+            width: 0;
+            background-color: transparent;
+            height: 100%;
+        }
+
+        .right-panel {
+            flex-basis: 75%; /* 3/4 of main-content-wrapper */
+            background-color: #ffffff;
+            height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Keep modal above calendar/task layers */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more specific */
+            max-width: 500px;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .time-selector {
+            display: flex;
+            justify-content: space-around; /* Distribute items evenly */
+            margin-bottom: 15px; /* Add some space below the selectors */
+        }
+
+        .time-selector div {
+            display: flex;
+            flex-direction: column; /* Stack label and input vertically */
+            align-items: center;
+            margin-bottom: 0; /* Remove individual item margin */
+        }
+
+        .time-selector label {
+            width: auto; /* Let label width be natural */
+            margin-right: 0; /* Remove right margin */
+            margin-bottom: 5px; /* Space between label and input */
+        }
+
+        .time-selector input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            text-align: center;
+            -moz-appearance: textfield; /* Hide Firefox number input arrows */
+        }
+
+        /* Hide Chrome, Safari, Edge, Opera number input arrows */
+        .time-selector input::-webkit-outer-spin-button,
+        .time-selector input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .task-item {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .has-notes-dot {
+            color: #ff69b4; /* Pink color */
+            font-size: 1.8em; /* Slightly smaller to fit better */
+            margin-left: 5px; /* Space between text and dot */
+            line-height: 1; /* Ensure line height doesn't add extra space */
+            display: inline-block;
+            transform: translateY(-0.1em); /* Adjust vertical position slightly */
+        }
+
+        .task-item .task-details h3 {
+            margin: 0;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            height: 1.5em; /* Fixed height for consistent sizing */
+        }
+
+        .task-item .task-details small {
+            color: #666;
+            font-size: 0.8em;
+            line-height: 1.2; /* Ensure consistent line height */
+        }
+
+        .task-item .time-left {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .task-item .time-left.overdue {
+            color: #dc3545;
+        }
+
+        .task-category-divider {
+            border-top: 1px solid #ccc;
+            margin: 20px 0;
+            text-align: center;
+            line-height: 0.1em;
+            color: #888;
+        }
+
+        .task-category-divider span {
+            background:#ffffff; /* Match left-panel background */
+            padding:0 10px;
+        }
+
+        .completed-toggle-label {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .collapsed-completed-indicator {
+            border: 1px dashed #ccc;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+            color: #666;
+            text-align: center;
+            font-size: 0.95em;
+            transition: opacity 0.35s ease, transform 0.35s ease, max-height 0.35s ease, margin 0.35s ease, padding 0.35s ease;
+            max-height: 60px;
+            opacity: 1;
+            transform: translateY(0);
+            overflow: hidden;
+            will-change: opacity, transform, max-height;
+        }
+
+        .collapsed-completed-indicator.hidden {
+            max-height: 0;
+            opacity: 0;
+            transform: translateY(-6px);
+            margin: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            border-width: 0;
+        }
+
+        .completed-items-container {
+            overflow: hidden;
+            transition: max-height 0.45s ease, opacity 0.45s ease, transform 0.45s ease;
+            max-height: 2000px; /* Large enough for typical completed lists */
+            opacity: 1;
+            transform: translateY(0);
+            will-change: max-height, opacity, transform;
+        }
+
+        .completed-items-container.collapsed {
+            max-height: 0;
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+
+        #taskList {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0; /* Ensure scrolling works inside flex container */
+            padding-right: 4px;
+        }
+
+        .task-tooltip {
+            display: none; /* Hidden by default */
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 1100;
+            width: 270px; /* Slightly narrower */
+            font-size: 0.9em;
+        }
+
+        .task-tooltip .close-tooltip {
+            float: right;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #aaa;
+        }
+
+        .task-tooltip .close-tooltip:hover {
+            color: #000;
+        }
+
+        .task-tooltip h4 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .tooltip-header {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: start;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        .tooltip-header h4 {
+            min-width: 0;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        .tooltip-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+        }
+
+        #delete-task-button {
+            padding: 5px 10px;
+            font-size: 0.85em;
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+
+        #complete-task-button {
+            padding: 5px 10px;
+            font-size: 0.85em;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+
+        .task-tooltip p {
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .tooltip-note-textarea {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            resize: vertical; /* Allow vertical resizing */
+            min-height: 30px; /* Minimum height */
+        }
+
+        #tooltip-notes-container {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .task-tooltip button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .day-tasks-list {
+            margin: 0;
+            padding-left: 0;
+            list-style: none;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .day-tasks-list li {
+            margin-bottom: 8px;
+            line-height: 1.35;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .calendar-day-tooltip {
+            display: none;
+            position: absolute;
+            z-index: 1200;
+            width: 240px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+            font-size: 0.9em;
+            pointer-events: auto;
+        }
+
+        .calendar-day-tooltip h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .task-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex: 0 0 auto;
+        }
+
+        .task-status-dot.one-time {
+            background-color: #f4c542;
+        }
+
+        .task-status-dot.longterm {
+            background-color: #3b82f6;
+        }
+
+        .task-status-dot.completed {
+            background-color: #22c55e;
+        }
+
+        .task-status-dot.overdue {
+            background-color: #ef4444;
+        }
+
+        .day-task-name {
+            cursor: pointer;
+            color: #333;
+            text-decoration: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-item.task-focus {
+            border-color: #666;
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.05), 0 6px 14px rgba(0,0,0,0.08);
+        }
+
+        /* Calendar Styling */
+        #calendar-container h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 0 5px;
+        }
+
+        .calendar-header button {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: #555;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        .calendar-header button:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .calendar-header span {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px; /* Subtle gap for grid lines */
+            background-color: #ccc; /* Light grid lines */
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            overflow: hidden; /* Ensures rounded corners */
+        }
+
+        .calendar-grid > div {
+            background-color: #f0f0f0;
+            padding: 8px 0;
+            text-align: center;
+            font-size: 0.9em;
+            color: #333;
+        }
+
+        .calendar-grid .day-name {
+            font-weight: bold;
+            background-color: #e0e0e0; /* Slightly darker for headers */
+            color: #555;
+            padding: 10px 0;
+        }
+
+        .calendar-grid .calendar-day {
+            padding: 8px; /* Add padding for content */
+            min-height: 80px; /* Make cells taller */
+            display: block;
+            border: 1px solid #e0e0e0;
+            background-color: #fff;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            position: relative;
+            overflow: hidden; /* Prevent dots from leaving day cell */
+        }
+
+        .calendar-grid .calendar-day:hover {
+            background-color: #d0d0d0;
+        }
+
+        .calendar-grid .empty-day {
+            background-color: #e0e0e0;
+        }
+
+        .calendar-grid .current-day {
+            background-color: #007bff; /* Mac-like blue */
+            color: white;
+            font-weight: bold;
+            border-radius: 3px; /* Slightly rounded corners for current day */
+        }
+
+        .calendar-grid .current-day:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+
+        .calendar-day-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 4px;
+            position: relative;
+            z-index: 3;
+        }
+
+        .calendar-day-number {
+            font-size: 1em;
+            line-height: 1.1;
+            min-width: 1.2em;
+        }
+
+        .calendar-small-dots {
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 2px;
+            max-width: calc(100% - 1.4em);
+            max-height: 3.2em; /* About 3 rows of tiny dots */
+            overflow: hidden;
+            margin-top: 2px;
+        }
+
+        .calendar-small-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--ui-dot-gray);
+            flex: 0 0 auto;
+        }
+
+        .calendar-big-dots {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            max-width: calc(100% - 12px);
+            pointer-events: none;
+        }
+
+        .calendar-big-dot {
+            width: var(--dot-size, 32px);
+            height: var(--dot-size, 32px);
+            border-radius: 50%;
+            background-color: var(--dot-color, var(--ui-dot-gray));
+            border: none;
+            position: absolute;
+            left: 50%;
+            top: var(--line-y, 80%);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        .longterm-line-segment {
+            position: absolute;
+            top: var(--line-y, 80%);
+            height: 10px;
+            background-color: var(--dot-color, var(--ui-dot-gray));
+            opacity: 0.85;
+            transform: translateY(-50%);
+            pointer-events: none;
+            border-radius: 0;
+            z-index: 1;
+        }
+
+        @keyframes breathe {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        #cat-image {
+            animation: breathe 4s infinite alternate ease-in-out;
+        }
+
+        .emoji {
+            position: absolute;
+            font-size: 2em;
+            opacity: 0;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            transition: transform 2s ease-out, opacity 2s ease-out;
+        }
+
+        .interaction-button {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #e0e0e0;
+            color: #333;
+            margin: 0 10px;
+            transition: background-color 0.2s;
+        }
+
+        .interaction-button:hover {
+            background-color: #d0d0d0;
+        }
+
+        @keyframes foodAnimation {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            50% { transform: translate(-50%, -150%) scale(1.5) rotate(180deg); opacity: 0.8; }
+            100% { transform: translate(-50%, -250%) scale(0.5) rotate(360deg); opacity: 0; }
+        }
+
+        .food-emoji {
+            position: absolute;
+            font-size: 3em;
+            z-index: 102;
+            pointer-events: none;
+            animation: foodAnimation 1.5s forwards;
+        }
+
+        @keyframes teaseMovement {
+            0% { left: 0%; top: 60%; transform: rotate(0deg); }
+            25% { left: 90%; top: 40%; transform: rotate(45deg); }
+            50% { left: 10%; top: 80%; transform: rotate(-45deg); }
+            75% { left: 80%; top: 20%; transform: rotate(30deg); }
+            100% { left: 0%; top: 60%; transform: rotate(0deg); }
+        }
+
+        .tease-item {
+            position: absolute;
+            font-size: 5em;
+            z-index: 102;
+            pointer-events: none;
+            opacity: 0.65;
+            animation: teaseMovement 4s infinite alternate ease-in-out;
+        }
+
+
+    </style>
+    <style>
+        :root {
+            --ink: #000;
+            --paper: #fff;
+            --line-thick: 3px;
+            --line-mid: 2px;
+            --line-thin: 1.5px;
+            --doodle-font: "Comic Sans MS", "Marker Felt", "Bradley Hand", "Chalkboard SE", cursive;
+            --sketch-spiral: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='28' viewBox='0 0 84 28'%3E%3Cpath d='M10 24 C10 7 24 7 24 24' stroke='black' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cpath d='M42 24 C42 7 56 7 56 24' stroke='black' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3Cpath d='M74 24 C74 7 88 7 88 24' stroke='black' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+        }
+
+        html,
+        body {
+            background: var(--paper) !important;
+            color: var(--ink) !important;
+            font-family: var(--doodle-font) !important;
+        }
+
+        body {
+            letter-spacing: 0.02em;
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            pointer-events: none;
+            border: var(--line-mid) solid var(--ink);
+            background: transparent;
+            z-index: 0;
+        }
+
+        body::before {
+            inset: 10px 12px 12px 10px;
+            transform: rotate(-0.35deg);
+        }
+
+        body::after {
+            inset: 18px 15px 14px 18px;
+            transform: rotate(0.25deg);
+        }
+
+        .main-content-wrapper {
+            background: var(--paper) !important;
+            z-index: 1;
+        }
+
+        .left-panel,
+        .right-panel,
+        #calendar-container,
+        .modal-content,
+        .task-tooltip,
+        .calendar-day-tooltip,
+        .task-item,
+        .collapsed-completed-indicator,
+        #stats-container,
+        .calendar-grid .calendar-day,
+        .calendar-grid .day-name,
+        .calendar-grid .empty-day,
+        button,
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        .progress-bar-background {
+            background: var(--paper) !important;
+            color: var(--ink) !important;
+            border: var(--line-thick) solid var(--ink) !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            position: relative;
+        }
+
+        .left-panel::before,
+        .right-panel::before,
+        #calendar-container::before,
+        .modal-content::before,
+        .task-tooltip::before,
+        .calendar-day-tooltip::before,
+        .task-item::before,
+        .collapsed-completed-indicator::before,
+        #stats-container::before,
+        .calendar-grid .calendar-day::before,
+        .calendar-grid .day-name::before,
+        .calendar-grid .empty-day::before,
+        button::before,
+        input[type="text"]::before,
+        input[type="number"]::before,
+        textarea::before,
+        .progress-bar-background::before {
+            content: "";
+            position: absolute;
+            inset: 3px -2px -3px 2px;
+            border: var(--line-mid) solid var(--ink);
+            pointer-events: none;
+            transform: rotate(-0.75deg);
+        }
+
+        .left-panel,
+        .right-panel {
+            padding: 22px !important;
+        }
+
+        .left-panel {
+            transform: rotate(-0.12deg);
+            border-right: none !important;
+        }
+
+        .right-panel {
+            transform: rotate(0.08deg);
+        }
+
+        #header-container {
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        #todo-list-title,
+        #calendar-container h2,
+        .modal-content h2 {
+            margin: 0 0 18px;
+            color: var(--ink) !important;
+            font-family: var(--doodle-font) !important;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        #calendar-icon {
+            width: 118px !important;
+            height: 118px !important;
+            padding: 10px;
+            background: var(--paper) !important;
+            border: var(--line-thick) solid var(--ink) !important;
+            filter: grayscale(1) contrast(1000%);
+            transform: rotate(2deg);
+        }
+
+        #calendar-container {
+            background: var(--paper) !important;
+            padding-top: 30px !important;
+            z-index: 3;
+        }
+
+        #calendar-container::after {
+            content: "";
+            position: absolute;
+            left: 18px;
+            right: 20px;
+            top: -2px;
+            height: 32px;
+            background-image: var(--sketch-spiral);
+            background-repeat: repeat-x;
+            background-size: 84px 28px;
+            pointer-events: none;
+        }
+
+        .modal {
+            background: var(--paper) !important;
+            padding: 24px;
+        }
+
+        .modal-content {
+            width: min(560px, 90vw) !important;
+            padding: 24px 22px !important;
+            backdrop-filter: none !important;
+            transform: rotate(-0.35deg);
+        }
+
+        .close-button,
+        .task-tooltip .close-tooltip {
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            float: none !important;
+            color: var(--ink) !important;
+            transform: rotate(8deg);
+        }
+
+        button,
+        .interaction-button,
+        #addTaskButton,
+        #saveTaskButton,
+        #delete-task-button,
+        #complete-task-button,
+        #save-notes-button {
+            background: var(--paper) !important;
+            color: var(--ink) !important;
+            border: var(--line-thick) solid var(--ink) !important;
+            border-radius: 0 !important;
+            padding: 10px 16px !important;
+            font-family: var(--doodle-font) !important;
+            font-size: 1rem !important;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            transition: transform 0.12s ease;
+        }
+
+        button:hover,
+        .interaction-button:hover,
+        #addTaskButton:hover,
+        #saveTaskButton:hover,
+        #delete-task-button:hover,
+        #complete-task-button:hover,
+        #save-notes-button:hover {
+            background: var(--paper) !important;
+            transform: translate(-1px, -1px) rotate(-0.7deg);
+        }
+
+        #addTaskButton {
+            align-self: flex-start;
+            margin-bottom: 16px !important;
+            transform: rotate(-1deg);
+        }
+
+        #saveTaskButton {
+            transform: rotate(1deg);
+        }
+
+        #delete-task-button {
+            transform: rotate(-1deg);
+        }
+
+        #complete-task-button,
+        #save-notes-button {
+            transform: rotate(1deg);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            background: var(--paper) !important;
+            color: var(--ink) !important;
+            padding: 10px 12px !important;
+            font-family: var(--doodle-font) !important;
+            font-size: 1rem !important;
+            transform: rotate(-0.45deg);
+        }
+
+        input[type="text"]::placeholder,
+        textarea::placeholder {
+            color: var(--ink);
+            opacity: 0.7;
+        }
+
+        input[type="radio"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: var(--line-thick) solid var(--ink);
+            background: var(--paper);
+            margin-right: 6px;
+            vertical-align: middle;
+            transform: rotate(-6deg);
+            cursor: pointer;
+        }
+
+        input[type="radio"]:checked {
+            background-image: repeating-linear-gradient(135deg, #000 0 3px, transparent 3px 6px);
+        }
+
+        .time-selector {
+            gap: 12px;
+            justify-content: space-between;
+        }
+
+        .time-selector div {
+            flex: 1;
+            gap: 6px;
+            align-items: stretch;
+        }
+
+        .time-selector label {
+            margin-bottom: 0 !important;
+            transform: rotate(-1deg);
+        }
+
+        #taskList {
+            padding-right: 6px;
+        }
+
+        .task-item {
+            padding: 14px 16px;
+            margin: 0 4px 14px 0;
+            gap: 14px;
+            transform: rotate(-0.35deg);
+        }
+
+        .task-item:nth-of-type(even) {
+            transform: rotate(0.45deg);
+        }
+
+        .task-item .task-details h3 {
+            height: auto !important;
+            margin: 0 0 4px;
+            font-size: 1.1rem;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+
+        .task-item .task-details small,
+        .task-tooltip p,
+        .calendar-day-tooltip h4,
+        .day-task-name {
+            color: var(--ink) !important;
+        }
+
+        .has-notes-dot {
+            color: var(--ink) !important;
+            font-size: 1.2rem;
+            transform: rotate(12deg);
+        }
+
+        .task-item .time-left {
+            color: var(--ink) !important;
+            font-size: 0.95rem;
+            padding-left: 10px;
+            border-left: var(--line-mid) solid var(--ink);
+            transform: rotate(1deg);
+        }
+
+        .task-item .time-left.overdue {
+            color: var(--ink) !important;
+            text-decoration: line-through;
+            text-decoration-thickness: 2px;
+        }
+
+        .task-item.task-focus {
+            border-color: var(--ink) !important;
+            transform: rotate(-0.2deg) scale(1.01);
+        }
+
+        .task-category-divider {
+            border-top: var(--line-thick) solid var(--ink) !important;
+            color: var(--ink) !important;
+            margin: 20px 6px 18px;
+        }
+
+        .task-category-divider span {
+            background: var(--paper) !important;
+            padding: 0 12px !important;
+            transform: translateY(-0.7em) rotate(-1deg);
+            font-weight: 700;
+        }
+
+        .collapsed-completed-indicator {
+            text-align: center;
+            transform: rotate(0.6deg);
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .collapsed-completed-indicator::before {
+            display: none !important;
+        }
+
+        .task-tooltip,
+        .calendar-day-tooltip {
+            width: 290px !important;
+            padding: 16px 16px 14px !important;
+            transform: rotate(-0.4deg);
+        }
+
+        .tooltip-header {
+            gap: 12px;
+            padding-right: 20px;
+        }
+
+        .tooltip-note-textarea {
+            min-height: 38px !important;
+            margin-bottom: 8px !important;
+        }
+
+        .day-task-name:hover {
+            text-decoration: underline;
+            text-decoration-thickness: 2px;
+        }
+
+        .task-status-dot {
+            width: 12px;
+            height: 12px;
+            border: var(--line-mid) solid var(--ink);
+            background: var(--paper) !important;
+            border-radius: 0;
+        }
+
+        .task-status-dot.one-time {
+            border-radius: 999px;
+            background: var(--ink) !important;
+        }
+
+        .task-status-dot.longterm {
+            transform: rotate(45deg);
+        }
+
+        .task-status-dot.completed {
+            background-image: linear-gradient(45deg, transparent 35%, #000 35%, #000 48%, transparent 48%), linear-gradient(-45deg, transparent 46%, #000 46%, #000 59%, transparent 59%) !important;
+        }
+
+        .task-status-dot.overdue {
+            background-image: repeating-linear-gradient(135deg, #000 0 2px, transparent 2px 4px) !important;
+        }
+
+        .calendar-header {
+            gap: 12px;
+            margin: 4px 0 16px;
+        }
+
+        .calendar-header span {
+            font-size: 1.2rem !important;
+            color: var(--ink) !important;
+            letter-spacing: 0.05em;
+            transform: rotate(-1deg);
+        }
+
+        .calendar-header button {
+            background: var(--paper) !important;
+            border: var(--line-thick) solid var(--ink) !important;
+            min-width: 48px;
+        }
+
+        .calendar-grid {
+            background: var(--paper) !important;
+            border: var(--line-thick) solid var(--ink) !important;
+            border-radius: 0 !important;
+            gap: 0 !important;
+            overflow: visible !important;
+            transform: rotate(-0.28deg);
+        }
+
+        .calendar-grid > div:nth-child(7n) {
+            border-right: 0 !important;
+        }
+
+        .calendar-grid .day-name,
+        .calendar-grid .empty-day,
+        .calendar-grid .calendar-day {
+            background: var(--paper) !important;
+            border-right: var(--line-mid) solid var(--ink) !important;
+            border-bottom: var(--line-mid) solid var(--ink) !important;
+        }
+
+        .calendar-grid .day-name {
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            transform: rotate(-0.5deg);
+        }
+
+        .calendar-grid .calendar-day,
+        .calendar-grid .empty-day {
+            min-height: 94px !important;
+        }
+
+        .calendar-grid .calendar-day {
+            transform: rotate(0.15deg);
+        }
+
+        .calendar-grid .calendar-day:hover {
+            background: var(--paper) !important;
+            transform: rotate(-0.25deg) translate(-1px, -1px);
+        }
+
+        .calendar-grid .current-day {
+            background: var(--paper) !important;
+            color: var(--ink) !important;
+            border-width: 4px !important;
+        }
+
+        .calendar-grid .current-day::after {
+            content: "";
+            position: absolute;
+            inset: 5px;
+            border: var(--line-thin) dashed var(--ink);
+            pointer-events: none;
+            transform: rotate(1deg);
+        }
+
+        .calendar-day-number {
+            font-weight: 700;
+            color: var(--ink) !important;
+        }
+
+        .calendar-small-dot {
+            width: 8px;
+            height: 8px;
+            border: var(--line-mid) solid var(--ink);
+            border-radius: 999px;
+            background: var(--paper) !important;
+        }
+
+        .calendar-big-dot {
+            background: var(--paper) !important;
+            border: var(--line-thick) solid var(--ink) !important;
+            border-radius: 999px !important;
+            transform: translate(-50%, -50%) rotate(-6deg);
+        }
+
+        .longterm-line-segment {
+            height: 0 !important;
+            border-top: var(--line-thick) solid var(--ink);
+            background: transparent !important;
+        }
+
+        #cat-container {
+            border: var(--line-thick) solid var(--ink);
+            background: var(--paper) !important;
+            transform: rotate(0.22deg);
+            overflow: hidden;
+        }
+
+        #cat-container::before {
+            content: "";
+            position: absolute;
+            inset: 10px;
+            border: var(--line-mid) solid var(--ink);
+            pointer-events: none;
+            transform: rotate(-0.75deg);
+        }
+
+        #cat-image {
+            filter: grayscale(1) contrast(1000%);
+        }
+
+        #stats-container {
+            top: 14px !important;
+            right: 14px !important;
+            padding: 12px !important;
+            transform: rotate(1deg);
+        }
+
+        #stats-container p {
+            margin: 0 0 8px 0 !important;
+            color: var(--ink) !important;
+        }
+
+        .progress-bar-background {
+            width: 120px !important;
+            height: 14px !important;
+            overflow: hidden;
+            margin-bottom: 10px !important;
+        }
+
+        .progress-bar-fill {
+            background: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 10px) !important;
+        }
+
+        #speech-bubble {
+            background: var(--paper) !important;
+            border: var(--line-thick) solid var(--ink) !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            padding: 12px 14px !important;
+            transform: translateX(-50%) rotate(-1.2deg) !important;
+        }
+
+        #speech-bubble > div {
+            background: var(--paper) !important;
+            border-bottom: var(--line-mid) solid var(--ink) !important;
+            border-right: var(--line-mid) solid var(--ink) !important;
+        }
+
+        .emoji,
+        .food-emoji,
+        .tease-item {
+            filter: grayscale(1) contrast(1000%);
+        }
+
+        ::selection {
+            background: #000;
+            color: #fff;
+        }
+
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #fff;
+            border: var(--line-mid) solid #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: repeating-linear-gradient(180deg, #000 0 4px, #fff 4px 7px);
+            border: var(--line-mid) solid #000;
+        }
+
+        @media (max-width: 980px) {
+            #calendar-icon {
+                width: 90px !important;
+                height: 90px !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content-wrapper {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .left-panel,
+            .right-panel {
+                flex-basis: auto;
+                min-height: 50vh;
+            }
+
+            .time-selector {
+                flex-direction: column;
+            }
+
+            .task-tooltip,
+            .calendar-day-tooltip {
+                width: min(92vw, 290px) !important;
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>食物口味偏好小调查 🍽️</h1>
-        <form id="surveyForm">
-            <div class="question-group">
-                <p>1. 你更喜欢哪种口味？</p>
-                <label><input type="radio" name="q1" value="A"> A. 偏咸</label><br>
-                <label><input type="radio" name="q1" value="B"> B. 偏甜</label><br>
-                <label><input type="radio" name="q1" value="C"> C. 都可以</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>2. 你更喜欢哪种粽子？</p>
-                <label><input type="radio" name="q2" value="A"> A. 咸粽子（肉粽等）</label><br>
-                <label><input type="radio" name="q2" value="B"> B. 甜粽子（豆沙、蜜枣等）</label><br>
-                <label><input type="radio" name="q2" value="C"> C. 都喜欢</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>3. 你对辣味的接受程度是？</p>
-                <label><input type="radio" name="q3" value="A"> A. 完全不能吃辣</label><br>
-                <label><input type="radio" name="q3" value="B"> B. 微辣可以</label><br>
-                <label><input type="radio" name="q3" value="C"> C. 很能吃辣</label><br>
-                <label><input type="radio" name="q3" value="D"> D. 无辣不欢</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>4. 你更喜欢哪种饮料？</p>
-                <label><input type="radio" name="q4" value="A"> A. 奶茶/甜饮</label><br>
-                <label><input type="radio" name="q4" value="B"> B. 无糖茶/咖啡</label><br>
-                <label><input type="radio" name="q4" value="C"> C. 碳酸饮料</label><br>
-                <label><input type="radio" name="q4" value="D"> D. 白开水</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>5. 你更喜欢哪种早餐？</p>
-                <label><input type="radio" name="q5" value="A"> A. 中式（包子、粥等）</label><br>
-                <label><input type="radio" name="q5" value="B"> B. 西式（面包、牛奶等）</label><br>
-                <label><input type="radio" name="q5" value="C"> C. 不固定</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>6. 你更喜欢哪种主食？</p>
-                <label><input type="radio" name="q6" value="A"> A. 米饭</label><br>
-                <label><input type="radio" name="q6" value="B"> B. 面食（面条、馒头等）</label><br>
-                <label><input type="radio" name="q6" value="C"> C. 都可以</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>7. 你对油腻食物的态度是？</p>
-                <label><input type="radio" name="q7" value="A"> A. 很喜欢</label><br>
-                <label><input type="radio" name="q7" value="B"> B. 偶尔可以</label><br>
-                <label><input type="radio" name="q7" value="C"> C. 尽量避免</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>8. 你更喜欢哪种零食？</p>
-                <label><input type="radio" name="q8" value="A"> A. 薯片等咸味零食</label><br>
-                <label><input type="radio" name="q8" value="B"> B. 蛋糕、糖果等甜食</label><br>
-                <label><input type="radio" name="q8" value="C"> C. 坚果类</label><br>
-                <label><input type="radio" name="q8" value="D"> D. 不太吃零食</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>9. 你更倾向于哪种口感？</p>
-                <label><input type="radio" name="q9" value="A"> A. 酥脆</label><br>
-                <label><input type="radio" name="q9" value="B"> B. 软糯</label><br>
-                <label><input type="radio" name="q9" value="C"> C. Q弹</label><br>
-                <label><input type="radio" name="q9" value="D"> D. 清爽</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>10. 如果必须选择一种，你更喜欢？</p>
-                <label><input type="radio" name="q10" value="A"> A. 重口味（辣、咸、油）</label><br>
-                <label><input type="radio" name="q10" value="B"> B. 清淡口味</label><br>
-                <label><input type="radio" name="q10" value="C"> C. 视情况而定</label><br>
-            </div>
-
-            <div class="question-group">
-                <p>11. （可选）你有没有特别讨厌的食物或口味？</p>
-                <textarea name="q11" rows="4" placeholder="请填写您讨厌的食物或口味..."></textarea>
-            </div>
-
-            <button type="submit">提交问卷</button>
-            <div id="message" style="margin-top: 20px;"></div>
-        </form>
+    <div id="calendar-container" style="position: absolute; height: 100vh; width: 0; overflow: hidden; transition: width 0.3s ease-in-out, padding 0.3s ease-in-out; background-color: #e0e0e0; padding: 0; box-sizing: border-box;">
+        <h2>Calendar</h2>
+        <div id="mini-calendar"></div>
     </div>
-    <script src="script.js"></script>
+  <div class="main-content-wrapper" style="display: flex; transition: transform 0.3s ease-in-out;">
+        <div class="left-panel">
+            <div id="header-container" style="display: flex; align-items: center; justify-content: space-between;">
+                <h1 id="todo-list-title">To-do List</h1>
+                <img id="calendar-icon" src="/Users/liangyining/Desktop/日历图标1.png" alt="Calendar" style="width: 145px; height: 145px; cursor: pointer; margin-left: 10px; background-color: transparent;">
+            </div>
+        <button id="addTaskButton" style="padding: 8px 15px; margin-bottom: 15px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">添加新任务</button>
+        <div id="taskList">
+            <!-- Tasks will be listed here -->
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div class="right-panel">
+        <div id="cat-container" style="position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
+            <img id="cat-image" src="/Users/liangyining/Desktop/宠物任务驱动/1.JPG" alt="猫咪" style="width: 100%; height: 100%; object-fit: contain; transform-origin: center center; cursor: pointer;">
+            <div id="stats-container" style="position: absolute; top: 10px; right: 10px; background-color: rgba(255, 255, 255, 0.5); padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 100;">
+                <p style="margin: 0 0 5px 0;">饱腹值 (Satiety): <span id="satiety-value">0</span>/30</p>
+                <div class="progress-bar-background" style="width: 100px; height: 10px; background-color: #eee; border-radius: 5px; overflow: hidden; margin-bottom: 10px;">
+                    <div id="satiety-progress" class="progress-bar-fill" style="width: 0%; height: 100%; background-color: #A0A0A0; transition: width 0.3s ease-in-out;"></div>
+                </div>
+                <p style="margin: 0 0 5px 0;">好感值 (Affection): <span id="affection-value">0</span>/30</p>
+                <div class="progress-bar-background" style="width: 100px; height: 10px; background-color: #eee; border-radius: 5px; overflow: hidden; margin-bottom: 10px;">
+                    <div id="affection-progress" class="progress-bar-fill" style="width: 0%; height: 100%; background-color: #A0A0A0; transition: width 0.3s ease-in-out;"></div>
+                </div>
+                <p style="margin: 0;">等级 (Level): <span id="level-value">1</span></p>
+            </div>
+            <div id="speech-bubble" style="position: absolute; background-color: white; border: 1px solid #ccc; border-radius: 10px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 100; display: none; max-width: 80%; text-align: center; top: 10%; left: 50%; transform: translateX(-50%);">
+                <p id="bubble-message" style="margin: 0;"></p>
+                <div style="position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 20px; height: 20px; background-color: white; border-bottom: 1px solid #ccc; border-right: 1px solid #ccc;"></div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- Closing main-content-wrapper -->
+
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>新建任务</h2>
+            <input type="text" id="taskInput" placeholder="输入任务内容" style="width: 100%; padding: 8px; margin-bottom: 15px; box-sizing: border-box;">
+            <div class="time-selector">
+                <div>
+                    <label for="monthInput">月:</label>
+                    <input type="number" id="monthInput" min="1" max="12" value="1" onchange="validateMonthInput()">
+                </div>
+                <div>
+                    <label for="dayInput">日:</label>
+                    <input type="number" id="dayInput" min="1" max="31" value="1" onchange="validateDayInput()">
+                </div>
+                <div>
+                    <label for="hourInput">时:</label>
+                    <input type="number" id="hourInput" min="0" max="23" value="0" onchange="formatHourInput()">
+                </div>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>任务类型:</label>
+                <input type="radio" id="oneTimeTask" name="taskType" value="one-time" checked>
+                <label for="oneTimeTask">一次性任务</label>
+                <input type="radio" id="longTermProgress" name="taskType" value="longterm">
+                <label for="longTermProgress">长期任务</label>
+            </div>
+            <button id="saveTaskButton" style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">保存任务</button>
+        </div>
+    </div>
+
+    <div id="taskTooltip" class="task-tooltip">
+        <span class="close-tooltip">&times;</span>
+        <div class="tooltip-header">
+            <h4 id="tooltip-task-name"></h4>
+            <div class="tooltip-actions">
+                <button id="delete-task-button">删除任务</button>
+                <button id="complete-task-button">已完成</button>
+            </div>
+        </div>
+        <p id="tooltip-due-date"></p>
+        <div id="tooltip-notes-container">
+            <!-- Notes will be dynamically added here -->
+        </div>
+        <button id="save-notes-button">保存备注</button>
+    </div>
+
+    <div id="calendarDayTooltip" class="calendar-day-tooltip">
+        <h4 id="day-tasks-title">当日截止任务</h4>
+        <ul id="day-tasks-list" class="day-tasks-list"></ul>
+    </div>
+
+    <div id="interactionModal" class="modal">
+        <div class="modal-content" style="backdrop-filter: blur(5px); background-color: rgba(255, 255, 255, 0.7);">
+            <h2>选择互动方式</h2>
+            <div style="display: flex; justify-content: space-around; margin-top: 20px;">
+                <button id="feedCatButton" class="interaction-button"><b>喂猫？</b></button>
+                <button id="randomMovementButton" class="interaction-button"><b>random movement？</b></button>
+                <button id="washCatButton" class="interaction-button"><b>洗澡？</b></button>
+                <button id="toiletCatButton" class="interaction-button"><b>上厕所？</b></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const todoListTitle = document.getElementById('todo-list-title');
+        const addTaskButton = document.getElementById('addTaskButton');
+        const taskModal = document.getElementById('taskModal');
+        const closeButton = document.querySelector('.close-button');
+        const taskInput = document.getElementById('taskInput');
+        const catImage = document.getElementById('cat-image');
+        const speechBubble = document.getElementById('speech-bubble');
+        const bubbleMessage = document.getElementById('bubble-message');
+        const monthInput = document.getElementById('monthInput');
+        const dayInput = document.getElementById('dayInput');
+        const hourInput = document.getElementById('hourInput');
+        const taskList = document.getElementById('taskList');
+        const oneTimeTaskRadio = document.getElementById('oneTimeTask');
+        const longTermProgressRadio = document.getElementById('longTermProgress');
+        const interactionModal = document.getElementById('interactionModal');
+        const feedCatButton = document.getElementById('feedCatButton');
+        const randomMovementButton = document.getElementById('randomMovementButton');
+        const washCatButton = document.getElementById('washCatButton');
+        const toiletCatButton = document.getElementById('toiletCatButton');
+
+        // New elements for the tooltip
+        const taskTooltip = document.getElementById('taskTooltip');
+        const closeTooltipButton = document.querySelector('.close-tooltip');
+        const tooltipTaskName = document.getElementById('tooltip-task-name');
+        const tooltipDueDate = document.getElementById('tooltip-due-date');
+        const tooltipNotesContainer = document.getElementById('tooltip-notes-container');
+        const saveNotesButton = document.getElementById('save-notes-button');
+        const completeTaskButton = document.getElementById('complete-task-button');
+        const deleteTaskButton = document.getElementById('delete-task-button');
+        const calendarDayTooltip = document.getElementById('calendarDayTooltip');
+        const dayTasksTitle = document.getElementById('day-tasks-title');
+        const dayTasksList = document.getElementById('day-tasks-list');
+        const satietyValueElement = document.getElementById('satiety-value');
+        const affectionValueElement = document.getElementById('affection-value');
+        const levelValueElement = document.getElementById('level-value');
+        const satietyProgressBar = document.getElementById('satiety-progress');
+        const affectionProgressBar = document.getElementById('affection-progress');
+
+        let currentTaskId = null; // To keep track of which task's notes are being edited
+        const UI_STATE_STORAGE_KEY = 'todoUiState';
+        let isCompletedTasksCollapsed = false; // Toggle for completed section collapse/expand
+        let activeCalendarDayCell = null; // Keeps tooltip open while hovering over cell/tooltip
+        let calendarTooltipHoverTimer = null;
+        let satiety = 0;
+        let affection = 0;
+        let level = 1;
+        const maxLevel = 6;
+        const maxStatValue = 30;
+        const satietyIncrement = 5;
+        const affectionIncrement = 5;
+        const satietyLongTermIncrement = 15;
+        const affectionLongTermIncrement = 15;
+        const parkEventChance = 0.05;
+
+        // Store last valid values for reset
+        let lastValidMonth = new Date().getMonth() + 1;
+        let lastValidDay = new Date().getDate();
+        let lastValidHour = new Date().getHours();
+
+        function saveStats() {
+            localStorage.setItem('petStats', JSON.stringify({ satiety, affection, level }));
+        }
+
+        function loadStats() {
+            const storedStats = localStorage.getItem('petStats');
+            if (!storedStats) return;
+
+            try {
+                const stats = JSON.parse(storedStats);
+                satiety = Number(stats.satiety) || 0;
+                affection = Number(stats.affection) || 0;
+                level = Math.min(maxLevel, Number(stats.level) || 1);
+            } catch (error) {
+                satiety = 0;
+                affection = 0;
+                level = 1;
+            }
+        }
+
+        function updateStatDisplays() {
+            satietyValueElement.textContent = satiety;
+            affectionValueElement.textContent = affection;
+            levelValueElement.textContent = level;
+            satietyProgressBar.style.width = `${(satiety / maxStatValue) * 100}%`;
+            affectionProgressBar.style.width = `${(affection / maxStatValue) * 100}%`;
+        }
+
+        function updateCatImage() {
+            const petImageByLevel = {
+                1: '/Users/liangyining/Desktop/宠物任务驱动/1.JPG',
+                2: '/Users/liangyining/Desktop/宠物任务驱动/3.JPG',
+                3: '/Users/liangyining/Desktop/宠物任务驱动/4.JPG',
+                4: '/Users/liangyining/Desktop/宠物任务驱动/5.JPG',
+                5: '/Users/liangyining/Desktop/宠物任务驱动/6.JPG',
+                6: '/Users/liangyining/Desktop/宠物任务驱动/7.JPG'
+            };
+            const safeLevel = Math.min(maxLevel, Math.max(1, level));
+            catImage.src = petImageByLevel[safeLevel] || `${safeLevel}.png`;
+        }
+
+        function checkLevelUp() {
+            if (satiety >= maxStatValue && affection >= maxStatValue) {
+                if (level >= maxLevel) {
+                    satiety = maxStatValue;
+                    affection = maxStatValue;
+                    updateCatImage();
+                    updateStatDisplays();
+                    saveStats();
+                    return;
+                }
+                level += 1;
+                satiety = 0;
+                affection = 0;
+                updateCatImage();
+                updateStatDisplays();
+                saveStats();
+                alert(`你的宠物升级了！现在是等级 ${level}！`);
+            }
+        }
+
+        function handleSpecialEventChance() {
+            if (Math.random() < parkEventChance) {
+                if (level >= maxLevel) {
+                    updateCatImage();
+                    updateStatDisplays();
+                    saveStats();
+                    return true;
+                }
+                level += 1;
+                satiety = 0;
+                affection = 0;
+                updateCatImage();
+                updateStatDisplays();
+                saveStats();
+                alert(`恭喜！你的宠物去公园玩耍，直接升到了等级 ${level}！`);
+                return true;
+            }
+            return false;
+        }
+
+        const messages = [
+            "生活不仅有眼前苟且，还有写不完的作业",
+            "赶DDL，赶一夜，干一夜，赶一页",
+            "一寸光阴一寸金假期没了我伤心",
+            "有人相爱，有人夜里看海，有人七八科作业写不出来"
+        ];
+
+        const emojis = ['❤️', '✨', '🐾', '🌟', '😊', '🎉'];
+        const emojiColors = ['#000000'];
+
+        // Helper to get max days in a month
+        function getMaxDaysInMonth(month, year) {
+            if ([1, 3, 5, 7, 8, 10, 12].includes(month)) return 31;
+            if ([4, 6, 9, 11].includes(month)) return 30;
+            if (month === 2) return (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28;
+            return 31; // Default for invalid month, though input limits should prevent this
+        }
+
+        addTaskButton.addEventListener('click', () => {
+            taskModal.style.display = 'flex';
+            // Reset inputs when opening modal
+            taskInput.value = '';
+            const now = new Date();
+            monthInput.value = now.getMonth() + 1;
+            dayInput.value = now.getDate();
+            hourInput.value = now.getHours();
+
+            lastValidMonth = parseInt(monthInput.value);
+            lastValidDay = parseInt(dayInput.value);
+            lastValidHour = parseInt(hourInput.value);
+
+            // Set day input max based on current month
+            dayInput.max = getMaxDaysInMonth(lastValidMonth, now.getFullYear());
+            formatHourInput(); // Format hour initially
+            oneTimeTaskRadio.checked = true; // Default to one-time task
+        });
+
+        closeButton.addEventListener('click', () => {
+            taskModal.style.display = 'none';
+        });
+
+        taskModal.addEventListener('click', (event) => {
+            if (event.target === taskModal) {
+                taskModal.style.display = 'none';
+            }
+        }); // Corrected closing for taskModal.addEventListener
+
+        // Close tooltip
+        closeTooltipButton.addEventListener('click', () => {
+            taskTooltip.style.display = 'none';
+        });
+
+        taskTooltip.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent clicks inside the tooltip from closing it via the document listener
+        });
+
+        saveNotesButton.addEventListener('click', () => {
+            if (currentTaskId) {
+                const taskItem = document.querySelector(`[data-id="${currentTaskId}"]`);
+                if (taskItem) {
+                    const noteInputs = tooltipNotesContainer.querySelectorAll('.tooltip-note-textarea');
+                    const newNotes = [];
+                    noteInputs.forEach(input => {
+                        const noteText = input.value.trim();
+                        if (noteText) {
+                            if (noteText.length > 50) {
+                                alert('备注不能超过50个字！');
+                                return; // Skip this note if too long
+                            }
+                            newNotes.push(noteText);
+                        }
+                    });
+                    taskItem.dataset.notes = JSON.stringify(newNotes.slice(0, 5)); // Max 5 notes
+                    updateTaskItemDisplay(taskItem); // Update display to show/hide pink dot
+                    saveTasks(); // Save tasks to localStorage after notes are saved
+                    showTaskTooltip(taskItem); // Re-render tooltip with updated notes (and new empty input if needed)
+                }
+            }
+        }); // Corrected closing for saveNotesButton.addEventListener
+
+        completeTaskButton.addEventListener('click', () => {
+            if (!currentTaskId) return;
+            const taskItem = document.querySelector(`[data-id="${currentTaskId}"]`);
+            if (!taskItem) return;
+
+            const isCompleted = taskItem.dataset.completed === 'true';
+            taskItem.dataset.completed = isCompleted ? 'false' : 'true';
+            saveTasks();
+            updateAllTaskTimes();
+
+            taskTooltip.style.display = 'none';
+            currentTaskId = null;
+
+            if (!isCompleted && (taskItem.dataset.taskType === 'one-time' || taskItem.dataset.taskType === 'longterm')) {
+                interactionModal.style.display = 'flex';
+            }
+        });
+
+        deleteTaskButton.addEventListener('click', () => {
+            if (!currentTaskId) return;
+            const taskItem = document.querySelector(`[data-id="${currentTaskId}"]`);
+            if (!taskItem) return;
+
+            const shouldDelete = confirm('确定要删除这个任务吗？');
+            if (!shouldDelete) return;
+
+            taskItem.remove();
+            taskTooltip.style.display = 'none';
+            currentTaskId = null;
+            saveTasks();
+            updateAllTaskTimes();
+        });
+
+        const calendarIcon = document.getElementById('calendar-icon');
+        const calendarContainer = document.getElementById('calendar-container');
+        const mainContentWrapper = document.querySelector('.main-content-wrapper');
+        const backgroundColors = ['#FFFFFF'];
+        const foodEmojis = ['🍗', '🍖', '🐟', '🍤', '🥛'];
+        const teaseItems = ['🎣', '🐭'];
+
+        function changeBackgroundColor() {
+            const randomColor = backgroundColors[Math.floor(Math.random() * backgroundColors.length)];
+            mainContentWrapper.style.transition = 'background-color 2s ease-in-out';
+            mainContentWrapper.style.backgroundColor = randomColor;
+            document.body.style.backgroundColor = '#FFFFFF';
+            calendarContainer.style.backgroundColor = '#FFFFFF';
+        }
+
+        function createEmoji() {
+            const catContainer = document.getElementById('cat-container');
+            const emoji = document.createElement('div');
+            emoji.classList.add('emoji');
+            emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            emoji.style.color = emojiColors[Math.floor(Math.random() * emojiColors.length)];
+
+            const catRect = catImage.getBoundingClientRect();
+            const offsetX = (Math.random() - 0.5) * catRect.width * 0.8;
+            const offsetY = (Math.random() - 0.5) * catRect.height * 0.8;
+
+            emoji.style.left = `calc(50% + ${offsetX}px)`;
+            emoji.style.top = `calc(50% + ${offsetY}px)`;
+            catContainer.appendChild(emoji);
+
+            setTimeout(() => {
+                emoji.style.transition = 'transform 1.5s ease-out, opacity 1.5s ease-out';
+                emoji.style.opacity = '1';
+                emoji.style.transform = 'translate(-50%, -100%) scale(1.2)';
+            }, 10);
+
+            setTimeout(() => {
+                emoji.style.opacity = '0';
+                emoji.style.transform = 'translate(-50%, -200%) scale(0.8)';
+                emoji.addEventListener('transitionend', () => {
+                    emoji.remove();
+                });
+            }, 1000);
+        }
+
+        catImage.addEventListener('click', () => {
+            const randomIndex = Math.floor(Math.random() * messages.length);
+            bubbleMessage.textContent = messages[randomIndex];
+            speechBubble.style.display = 'block';
+
+            setTimeout(() => {
+                speechBubble.style.display = 'none';
+            }, 3000);
+
+            for (let i = 0; i < 5; i++) {
+                createEmoji();
+            }
+
+            changeBackgroundColor();
+        });
+
+        feedCatButton.addEventListener('click', () => {
+            interactionModal.style.display = 'none';
+            satiety = Math.min(maxStatValue, satiety + satietyIncrement);
+            updateStatDisplays();
+            checkLevelUp();
+            saveStats();
+
+            const randomFood = foodEmojis[Math.floor(Math.random() * foodEmojis.length)];
+            const catContainer = document.getElementById('cat-container');
+            const foodEmojiElement = document.createElement('div');
+            foodEmojiElement.classList.add('food-emoji');
+            foodEmojiElement.textContent = randomFood;
+            foodEmojiElement.style.left = '50%';
+            foodEmojiElement.style.top = '80%';
+            catContainer.appendChild(foodEmojiElement);
+
+            foodEmojiElement.addEventListener('animationend', () => {
+                foodEmojiElement.remove();
+            });
+        });
+
+        randomMovementButton.addEventListener('click', () => {
+            interactionModal.style.display = 'none';
+            affection = Math.min(maxStatValue, affection + affectionIncrement);
+            updateStatDisplays();
+            checkLevelUp();
+            saveStats();
+
+            const randomTeaseItem = teaseItems[Math.floor(Math.random() * teaseItems.length)];
+            const catContainer = document.getElementById('cat-container');
+            const teaseItemElement = document.createElement('div');
+            teaseItemElement.classList.add('tease-item');
+            teaseItemElement.textContent = randomTeaseItem;
+            catContainer.appendChild(teaseItemElement);
+
+            teaseItemElement.addEventListener('animationend', () => {
+                teaseItemElement.remove();
+            });
+
+            setTimeout(() => {
+                teaseItemElement.remove();
+            }, 4000);
+        });
+
+        toiletCatButton.addEventListener('click', () => {
+            interactionModal.style.display = 'none';
+            if (!handleSpecialEventChance()) {
+                satiety = Math.min(maxStatValue, satiety + satietyLongTermIncrement);
+            }
+            updateStatDisplays();
+            checkLevelUp();
+            saveStats();
+
+            const catContainer = document.getElementById('cat-container');
+            const poopEmojis = ['💩', '🚽'];
+            for (let i = 0; i < 3; i++) {
+                const poopEmojiElement = document.createElement('div');
+                poopEmojiElement.classList.add('food-emoji');
+                poopEmojiElement.textContent = poopEmojis[Math.floor(Math.random() * poopEmojis.length)];
+                poopEmojiElement.style.left = `${50 + (Math.random() - 0.5) * 40}%`;
+                poopEmojiElement.style.top = `${80 + (Math.random() - 0.5) * 20}%`;
+                catContainer.appendChild(poopEmojiElement);
+
+                poopEmojiElement.addEventListener('animationend', () => {
+                    poopEmojiElement.remove();
+                });
+            }
+        });
+
+        washCatButton.addEventListener('click', () => {
+            interactionModal.style.display = 'none';
+            if (!handleSpecialEventChance()) {
+                affection = Math.min(maxStatValue, affection + affectionLongTermIncrement);
+            }
+            updateStatDisplays();
+            checkLevelUp();
+            saveStats();
+
+            const catContainer = document.getElementById('cat-container');
+            const washEmojis = ['🚿', '🛁', '🧼', '💧'];
+            for (let i = 0; i < 3; i++) {
+                const washEmojiElement = document.createElement('div');
+                washEmojiElement.classList.add('food-emoji');
+                washEmojiElement.textContent = washEmojis[Math.floor(Math.random() * washEmojis.length)];
+                washEmojiElement.style.left = `${50 + (Math.random() - 0.5) * 40}%`;
+                washEmojiElement.style.top = `${80 + (Math.random() - 0.5) * 20}%`;
+                catContainer.appendChild(washEmojiElement);
+
+                washEmojiElement.addEventListener('animationend', () => {
+                    washEmojiElement.remove();
+                });
+            }
+        });
+
+        let isCalendarOpen = false;
+
+        calendarIcon.addEventListener('click', () => {
+            isCalendarOpen = !isCalendarOpen;
+            if (isCalendarOpen) {
+                calendarContainer.style.width = '800px';
+                calendarContainer.style.paddingLeft = '20px';
+                calendarContainer.style.paddingRight = '20px';
+                mainContentWrapper.style.transform = 'translateX(800px)';
+            } else {
+                calendarContainer.style.width = '0';
+                calendarContainer.style.paddingLeft = '0';
+                calendarContainer.style.paddingRight = '0';
+                mainContentWrapper.style.transform = 'translateX(0)';
+            }
+        });
+
+        function getCalendarTaskDotsByDate(year, month) {
+            const tasksByDate = {};
+            const longtermVisuals = [];
+            const storedTasks = localStorage.getItem('tasks');
+            if (!storedTasks) return { tasksByDate, longtermVisuals };
+
+            let tasks = [];
+            try {
+                tasks = JSON.parse(storedTasks);
+            } catch (error) {
+                return { tasksByDate, longtermVisuals };
+            }
+
+            tasks.forEach(task => {
+                if (!task || !task.dueDate) return;
+
+                const dueDate = new Date(parseInt(task.dueDate, 10));
+                if (Number.isNaN(dueDate.getTime())) return;
+                const createdDate = new Date(parseInt(task.createdDate || task.dueDate, 10));
+                if (Number.isNaN(createdDate.getTime())) return;
+
+                if (task.taskType === 'longterm') {
+                    const taskStart = createdDate.getTime() <= dueDate.getTime() ? createdDate : dueDate;
+                    const taskEnd = createdDate.getTime() <= dueDate.getTime() ? dueDate : createdDate;
+
+                    const monthStart = new Date(year, month, 1, 0, 0, 0, 0);
+                    const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+                    if (taskEnd.getTime() < monthStart.getTime() || taskStart.getTime() > monthEnd.getTime()) {
+                        return;
+                    }
+
+                    const visibleStart = taskStart.getTime() < monthStart.getTime() ? monthStart : taskStart;
+                    const visibleEnd = taskEnd.getTime() > monthEnd.getTime() ? monthEnd : taskEnd;
+                    const startDay = visibleStart.getDate();
+                    const endDay = visibleEnd.getDate();
+                    const isClippedStart = taskStart.getTime() < monthStart.getTime();
+                    const isClippedEnd = taskEnd.getTime() > monthEnd.getTime();
+
+                    const hasCreatedDot = createdDate.getFullYear() === year && createdDate.getMonth() === month;
+                    const hasDueDot = dueDate.getFullYear() === year && dueDate.getMonth() === month;
+                    const createdDay = hasCreatedDot ? createdDate.getDate() : null;
+                    const dueDay = hasDueDot ? dueDate.getDate() : null;
+
+                    longtermVisuals.push({
+                        id: task.id || `longterm-${dueDate.getTime()}`,
+                        startDay,
+                        endDay,
+                        isClippedStart,
+                        isClippedEnd,
+                        createdDay,
+                        dueDay
+                    });
+                } else if (dueDate.getFullYear() === year && dueDate.getMonth() === month) {
+                    const dayKey = dueDate.getDate().toString();
+                    if (!tasksByDate[dayKey]) {
+                        tasksByDate[dayKey] = { shortCount: 0 };
+                    }
+                    tasksByDate[dayKey].shortCount += 1;
+                }
+            });
+
+            return { tasksByDate, longtermVisuals };
+        }
+
+        function getStableLongtermDotSize(taskId) {
+            const id = String(taskId || 'default');
+            let hash = 0;
+            for (let i = 0; i < id.length; i++) {
+                hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+            }
+            const minSize = 24;
+            const maxSize = 40;
+            return minSize + (hash % (maxSize - minSize + 1));
+        }
+
+        function getStableLongtermColor(taskId) {
+            return '#000000';
+        }
+
+        function assignLongtermLanes(longtermVisuals) {
+            // Smaller dots should be higher when timelines overlap.
+            const visuals = [...longtermVisuals].sort((a, b) => {
+                if (a.dotSize !== b.dotSize) return a.dotSize - b.dotSize;
+                return a.startDay - b.startDay;
+            });
+
+            const laneLastEndDay = [];
+            visuals.forEach(visual => {
+                let lane = 0;
+                while (laneLastEndDay[lane] >= visual.startDay) {
+                    lane += 1;
+                }
+                laneLastEndDay[lane] = visual.endDay;
+                visual.lane = lane;
+            });
+
+            return visuals;
+        }
+
+        function getTasksForCalendarDate(year, month, day) {
+            const storedTasks = localStorage.getItem('tasks');
+            if (!storedTasks) return [];
+
+            let tasks = [];
+            try {
+                tasks = JSON.parse(storedTasks);
+            } catch (error) {
+                return [];
+            }
+
+            return tasks.filter(task => {
+                if (!task || !task.dueDate) return false;
+                const dueDate = new Date(parseInt(task.dueDate, 10));
+                if (Number.isNaN(dueDate.getTime())) return false;
+                return (
+                    dueDate.getFullYear() === year &&
+                    dueDate.getMonth() === month &&
+                    dueDate.getDate() === day
+                );
+            }).sort((a, b) => parseInt(a.dueDate, 10) - parseInt(b.dueDate, 10));
+        }
+
+        function getTaskStatusClass(task) {
+            const isCompleted = task.completed === 'true' || task.completed === true;
+            if (isCompleted) return 'completed';
+
+            const dueDate = new Date(parseInt(task.dueDate, 10));
+            if (dueDate.getTime() < Date.now()) return 'overdue';
+
+            return task.taskType === 'longterm' ? 'longterm' : 'one-time';
+        }
+
+        function showCalendarDayTooltip(year, month, day, targetElement) {
+            activeCalendarDayCell = targetElement;
+            const tasks = getTasksForCalendarDate(year, month, day);
+            const now = new Date();
+
+            // Match task list order:
+            // one-time -> long-term -> overdue -> completed
+            let oneTimeTasks = [];
+            let longTermTasks = [];
+            let overdueTasks = [];
+            let completedTasks = [];
+
+            tasks.forEach(task => {
+                const dueDate = new Date(parseInt(task.dueDate, 10));
+                const isCompleted = task.completed === 'true' || task.completed === true;
+
+                if (isCompleted) {
+                    completedTasks.push(task);
+                    return;
+                }
+                if (dueDate.getTime() < now.getTime()) {
+                    overdueTasks.push(task);
+                    return;
+                }
+
+                if (task.taskType === 'longterm') {
+                    longTermTasks.push(task);
+                } else {
+                    oneTimeTasks.push(task);
+                }
+            });
+
+            const sortByDueDate = (a, b) => parseInt(a.dueDate, 10) - parseInt(b.dueDate, 10);
+            oneTimeTasks.sort(sortByDueDate);
+            longTermTasks.sort(sortByDueDate);
+            overdueTasks.sort(sortByDueDate);
+            completedTasks.sort(sortByDueDate);
+
+            const orderedTasks = [
+                ...oneTimeTasks,
+                ...longTermTasks,
+                ...overdueTasks,
+                ...completedTasks
+            ];
+            const monthText = (month + 1).toString().padStart(2, '0');
+            const dayText = day.toString().padStart(2, '0');
+            dayTasksTitle.textContent = `${monthText}月${dayText}日 截止任务`;
+
+            dayTasksList.innerHTML = '';
+            if (orderedTasks.length === 0) {
+                const emptyItem = document.createElement('li');
+                emptyItem.textContent = '这一天没有截止任务';
+                dayTasksList.appendChild(emptyItem);
+            } else {
+                orderedTasks.forEach(task => {
+                    const taskItem = document.createElement('li');
+                    const statusDot = document.createElement('span');
+                    statusDot.classList.add('task-status-dot', getTaskStatusClass(task));
+
+                    const taskName = document.createElement('span');
+                    taskName.classList.add('day-task-name');
+                    taskName.textContent = task.name;
+                    taskName.dataset.taskId = task.id;
+                    taskName.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const taskTarget = taskList.querySelector(`[data-id="${task.id}"]`);
+                        if (taskTarget) {
+                            if (taskTarget.dataset.completed === 'true' && isCompletedTasksCollapsed) {
+                                isCompletedTasksCollapsed = false;
+                                saveUiState();
+                                toggleCompletedSectionVisibility();
+                            }
+                            taskTarget.classList.add('task-focus');
+                            taskTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setTimeout(() => taskTarget.classList.remove('task-focus'), 1500);
+                            showTaskTooltip(taskTarget);
+                        }
+                        hideCalendarDayTooltip();
+                    });
+
+                    taskItem.appendChild(statusDot);
+                    taskItem.appendChild(taskName);
+                    dayTasksList.appendChild(taskItem);
+                });
+            }
+
+            const rect = targetElement.getBoundingClientRect();
+            const tooltipWidth = 240;
+            const viewportPadding = 12;
+            let left = rect.right + window.scrollX + 10;
+            let top = rect.top + window.scrollY;
+
+            if (left + tooltipWidth > window.scrollX + window.innerWidth - viewportPadding) {
+                left = rect.left + window.scrollX - tooltipWidth - 10;
+            }
+
+            if (left < window.scrollX + viewportPadding) {
+                left = window.scrollX + viewportPadding;
+            }
+
+            calendarDayTooltip.style.left = `${left}px`;
+            calendarDayTooltip.style.top = `${top}px`;
+            calendarDayTooltip.style.display = 'block';
+        }
+
+        function hideCalendarDayTooltip() {
+            calendarDayTooltip.style.display = 'none';
+            activeCalendarDayCell = null;
+        }
+
+        calendarDayTooltip.addEventListener('mouseleave', (event) => {
+            const to = event.relatedTarget;
+            // If moving back onto the associated day cell, keep tooltip open.
+            if (to && activeCalendarDayCell && activeCalendarDayCell.contains(to)) return;
+            hideCalendarDayTooltip();
+        });
+
+        function saveUiState() {
+            const uiState = {
+                isCompletedTasksCollapsed
+            };
+            localStorage.setItem(UI_STATE_STORAGE_KEY, JSON.stringify(uiState));
+        }
+
+        function loadUiState() {
+            const storedUiState = localStorage.getItem(UI_STATE_STORAGE_KEY);
+            if (!storedUiState) return;
+
+            try {
+                const parsed = JSON.parse(storedUiState);
+                isCompletedTasksCollapsed = !!parsed.isCompletedTasksCollapsed;
+            } catch (error) {
+                isCompletedTasksCollapsed = false;
+            }
+        }
+
+        // Basic calendar generation for demonstration
+        function generateCalendar(year, month) {
+            const miniCalendar = document.getElementById('mini-calendar');
+            miniCalendar.innerHTML = ''; // Clear previous calendar
+            const calendarTaskData = getCalendarTaskDotsByDate(year, month);
+            const taskDotsByDate = calendarTaskData.tasksByDate;
+            const longtermVisuals = calendarTaskData.longtermVisuals;
+
+            const monthNames = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"];
+            const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
+
+            const firstDay = new Date(year, month).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const calendarHeader = document.createElement('div');
+            calendarHeader.classList.add('calendar-header');
+            calendarHeader.innerHTML = `
+                <button id="prevMonth">&lt;</button>
+                <span>${year}年 ${monthNames[month]}</span>
+                <button id="nextMonth">&gt;</button>
+            `;
+            miniCalendar.appendChild(calendarHeader);
+
+            const calendarGrid = document.createElement('div');
+            calendarGrid.classList.add('calendar-grid');
+            const dayCellsByDay = {};
+
+            // Day names
+            dayNames.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.classList.add('day-name');
+                dayHeader.textContent = day;
+                calendarGrid.appendChild(dayHeader);
+            });
+
+            // Empty cells for days before the 1st
+            for (let i = 0; i < firstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.classList.add('empty-day');
+                calendarGrid.appendChild(emptyCell);
+            }
+
+            // Days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.classList.add('calendar-day');
+                dayCellsByDay[day] = dayCell;
+                const dotInfo = taskDotsByDate[day.toString()] || { shortCount: 0 };
+
+                const dayHeader = document.createElement('div');
+                dayHeader.classList.add('calendar-day-header');
+
+                const dayNumber = document.createElement('span');
+                dayNumber.classList.add('calendar-day-number');
+                dayNumber.textContent = day.toString();
+                dayHeader.appendChild(dayNumber);
+
+                const smallDots = document.createElement('div');
+                smallDots.classList.add('calendar-small-dots');
+                const maxSmallDots = 24; // Keep dots inside by capping visual count
+                const shortDotsToShow = Math.min(dotInfo.shortCount, maxSmallDots);
+                for (let i = 0; i < shortDotsToShow; i++) {
+                    const dot = document.createElement('span');
+                    dot.classList.add('calendar-small-dot');
+                    smallDots.appendChild(dot);
+                }
+                dayHeader.appendChild(smallDots);
+                dayCell.appendChild(dayHeader);
+
+                const today = new Date();
+                if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+                    dayCell.classList.add('current-day');
+                }
+                dayCell.addEventListener('mouseenter', () => {
+                    clearTimeout(calendarTooltipHoverTimer);
+                    calendarTooltipHoverTimer = setTimeout(() => {
+                        showCalendarDayTooltip(year, month, day, dayCell);
+                    }, 220);
+                });
+                dayCell.addEventListener('mouseleave', (event) => {
+                    clearTimeout(calendarTooltipHoverTimer);
+                    const to = event.relatedTarget;
+                    if (to && calendarDayTooltip.contains(to)) return;
+
+                    // Small delay to avoid "flash" when moving from cell -> tooltip.
+                    setTimeout(() => {
+                        if (activeCalendarDayCell === dayCell && !calendarDayTooltip.matches(':hover')) {
+                            hideCalendarDayTooltip();
+                        }
+                    }, 50);
+                });
+                calendarGrid.appendChild(dayCell);
+            }
+
+            longtermVisuals.forEach(visual => {
+                visual.dotSize = getStableLongtermDotSize(visual.id);
+                visual.dotColor = getStableLongtermColor(visual.id);
+            });
+            const layeredLongtermVisuals = assignLongtermLanes(longtermVisuals);
+
+            layeredLongtermVisuals.forEach(visual => {
+                const dotSize = visual.dotSize;
+                const dotColor = visual.dotColor;
+                const lineY = Math.max(24, 80 - (visual.lane * 10));
+
+                for (let d = visual.startDay; d <= visual.endDay; d++) {
+                    const cell = dayCellsByDay[d];
+                    if (!cell) continue;
+                    const line = document.createElement('div');
+                    line.classList.add('longterm-line-segment');
+                    line.style.setProperty('--line-y', `${lineY}%`);
+                    line.style.setProperty('--dot-color', dotColor);
+
+                    if (visual.startDay === visual.endDay) {
+                        if (visual.isClippedStart || visual.isClippedEnd) {
+                            line.style.left = '0';
+                            line.style.width = '100%';
+                        } else {
+                            line.style.left = '35%';
+                            line.style.width = '30%';
+                        }
+                    } else if (d === visual.startDay && !visual.isClippedStart) {
+                        line.style.left = '50%';
+                        line.style.width = '50%';
+                    } else if (d === visual.endDay && !visual.isClippedEnd) {
+                        line.style.left = '0';
+                        line.style.width = '50%';
+                    } else {
+                        line.style.left = '0';
+                        line.style.width = '100%';
+                    }
+                    cell.appendChild(line);
+                }
+
+                if (visual.createdDay && dayCellsByDay[visual.createdDay]) {
+                    const createdDot = document.createElement('span');
+                    createdDot.classList.add('calendar-big-dot');
+                    createdDot.style.setProperty('--dot-size', '16px');
+                    createdDot.style.setProperty('--line-y', `${lineY}%`);
+                    createdDot.style.setProperty('--dot-color', dotColor);
+                    dayCellsByDay[visual.createdDay].appendChild(createdDot);
+                }
+
+                if (visual.dueDay && dayCellsByDay[visual.dueDay]) {
+                    const dueDot = document.createElement('span');
+                    dueDot.classList.add('calendar-big-dot');
+                    dueDot.style.setProperty('--dot-size', `${dotSize}px`);
+                    dueDot.style.setProperty('--line-y', `${lineY}%`);
+                    dueDot.style.setProperty('--dot-color', dotColor);
+                    dayCellsByDay[visual.dueDay].appendChild(dueDot);
+                }
+            });
+
+            miniCalendar.appendChild(calendarGrid);
+
+            // Add event listeners for month navigation
+            document.getElementById('prevMonth').addEventListener('click', () => {
+                currentMonth--;
+                if (currentMonth < 0) {
+                    currentMonth = 11;
+                    currentYear--;
+                }
+                generateCalendar(currentYear, currentMonth);
+            });
+
+            document.getElementById('nextMonth').addEventListener('click', () => {
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYear++;
+                }
+                generateCalendar(currentYear, currentMonth);
+            });
+        }
+
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth();
+        generateCalendar(currentYear, currentMonth);
+
+        // Initial calendar generation
+
+        saveTaskButton.addEventListener('click', () => {
+            const taskName = taskInput.value.trim();
+            if (taskName === '') {
+                alert('任务名称不能为空！');
+                return;
+            }
+
+            // Validate all inputs before saving
+            if (!validateMonthInput() || !validateDayInput() || !validateHourInput()) {
+                alert('请输入真实的时间哦！');
+                return;
+            }
+
+            const month = parseInt(monthInput.value);
+            const day = parseInt(dayInput.value);
+            const hour = parseInt(hourInput.value);
+            const year = new Date().getFullYear();
+
+            const dueDate = new Date(year, month - 1, day, hour);
+
+            // Ensure the date is not in the past (unless it's today's date but a past hour, which is allowed but marked overdue)
+            if (dueDate.getTime() < new Date().getTime() && 
+                !(dueDate.getFullYear() === new Date().getFullYear() &&
+                  dueDate.getMonth() === new Date().getMonth() &&
+                  dueDate.getDate() === new Date().getDate() &&
+                  dueDate.getHours() < new Date().getHours())) {
+                alert('截止日期不能早于当前时间！');
+                return;
+            }
+
+            const taskType = document.querySelector('input[name="taskType"]:checked').value;
+            addTaskToList(taskName, dueDate, taskType);
+
+            taskModal.style.display = 'none';
+        });
+
+        function calculateTimeRemaining(dueDate) {
+            const now = new Date();
+            const diffMs = dueDate.getTime() - now.getTime();
+
+            if (diffMs <= 0) {
+                return { text: '已过期', overdue: true };
+            }
+
+            const MS_PER_MINUTE = 1000 * 60;
+            const MS_PER_HOUR = MS_PER_MINUTE * 60;
+            const MS_PER_DAY = MS_PER_HOUR * 24;
+            const MS_PER_MONTH = MS_PER_DAY * 30; // Approximate month for display
+
+            if (diffMs < MS_PER_HOUR) { // Less than 1 hour
+                return { text: '<1小时', overdue: true };
+            } else if (diffMs < MS_PER_DAY) { // Less than 1 day
+                const diffHours = Math.ceil(diffMs / MS_PER_HOUR);
+                return { text: `${diffHours} 小时`, overdue: false };
+            } else if (diffMs < MS_PER_MONTH) { // Between 1 day and less than 1 month
+                const diffDays = Math.ceil(diffMs / MS_PER_DAY);
+                return { text: `${diffDays} 天`, overdue: false };
+            } else { // Greater than or equal to 1 month
+                const diffMonths = Math.ceil(diffMs / MS_PER_MONTH);
+                return { text: `${diffMonths} 月`, overdue: false };
+            }
+        }
+
+        // Normalize notes from old/new storage formats into a JSON string.
+        function normalizeNotesForStorage(notesValue) {
+            if (Array.isArray(notesValue)) {
+                return JSON.stringify(notesValue.slice(0, 5));
+            }
+
+            if (typeof notesValue === 'string') {
+                try {
+                    const parsed = JSON.parse(notesValue);
+                    if (Array.isArray(parsed)) {
+                        return JSON.stringify(parsed.slice(0, 5));
+                    }
+                } catch (error) {
+                    // Fallback below for legacy plain-text storage.
+                }
+
+                const trimmed = notesValue.trim();
+                if (!trimmed) {
+                    return JSON.stringify([]);
+                }
+                return JSON.stringify([trimmed.slice(0, 50)]);
+            }
+
+            return JSON.stringify([]);
+        }
+
+        function addTaskToList(name, dueDate, taskType) {
+            const taskItem = document.createElement('div');
+            taskItem.classList.add('task-item');
+            const taskId = 'task-' + Date.now(); // Generate a unique ID for the task
+            taskItem.dataset.id = taskId;
+            taskItem.dataset.name = name; // Store original task name
+            taskItem.dataset.createdDate = Date.now().toString(); // Store creation timestamp
+            taskItem.dataset.dueDate = dueDate.getTime(); // Store due date timestamp
+            taskItem.dataset.taskType = taskType; // Store task type
+            taskItem.dataset.completed = 'false'; // Store completed state
+            taskItem.dataset.notes = JSON.stringify([]); // Initialize notes as an empty JSON array
+
+            const dueMonth = (dueDate.getMonth() + 1).toString().padStart(2, '0');
+            const dueDay = dueDate.getDate().toString().padStart(2, '0');
+            const dueHour = dueDate.getHours().toString().padStart(2, '0');
+
+            taskItem.innerHTML = `
+                <div class="task-details">
+                    <h3>${name}</h3>
+                    <small>DUE: ${dueMonth}月${dueDay}日 ${dueHour}时</small>
+                </div>
+                <span class="time-left"></span>
+            `;
+
+            taskItem.addEventListener('click', (event) => {
+                showTaskTooltip(taskItem, event);
+                event.stopPropagation(); // Stop propagation to prevent document click listener from closing it
+            });
+
+            taskList.appendChild(taskItem);
+            updateAllTaskTimes(); // Update all tasks including sorting after adding new one
+            saveTasks(); // Save tasks to localStorage after a new task is added
+        }
+
+        function showTaskTooltip(taskItem, event) {
+            currentTaskId = taskItem.dataset.id;
+            const taskName = taskItem.dataset.name; // Get task name from dataset
+            const dueDateText = taskItem.querySelector('small').textContent;
+            const notes = JSON.parse(taskItem.dataset.notes || '[]'); // Parse notes as an array
+            const isCompleted = taskItem.dataset.completed === 'true';
+
+            tooltipTaskName.textContent = taskName;
+            tooltipDueDate.textContent = dueDateText;
+            completeTaskButton.disabled = false;
+            completeTaskButton.textContent = isCompleted ? '其实没有' : '已完成';
+
+            // Clear previous notes and render current notes
+            tooltipNotesContainer.innerHTML = '';
+            notes.forEach(note => {
+                const textarea = document.createElement('textarea');
+                textarea.classList.add('tooltip-note-textarea');
+                textarea.value = note;
+                textarea.maxLength = 50;
+                textarea.readOnly = false; // Allow editing existing notes
+                textarea.rows = 1; // Set initial rows for textarea
+                tooltipNotesContainer.appendChild(textarea);
+            });
+
+            // Add a new empty input field if less than 5 notes
+            if (notes.length < 5) {
+                const textarea = document.createElement('textarea');
+                textarea.classList.add('tooltip-note-textarea');
+                textarea.placeholder = '输入任务备注...';
+                textarea.maxLength = 50;
+                textarea.rows = 1; // Set initial rows for textarea
+                tooltipNotesContainer.appendChild(textarea);
+            }
+
+            // Position the tooltip near the clicked task item
+            const rect = taskItem.getBoundingClientRect();
+            taskTooltip.style.top = `${rect.top + window.scrollY}px`;
+            taskTooltip.style.left = `${rect.right + window.scrollX + 10}px`; // 10px to the right of the task
+            taskTooltip.style.display = 'block';
+
+            if (event) {
+                event.stopPropagation(); // Prevent the click from bubbling up to document and closing tooltip
+            }
+        }
+
+        function saveTasks() {
+            const allTaskItems = Array.from(taskList.querySelectorAll('.task-item'));
+            const tasksToSave = allTaskItems.map(item => {
+                const normalizedNotes = normalizeNotesForStorage(item.dataset.notes);
+                item.dataset.notes = normalizedNotes;
+                return {
+                    id: item.dataset.id,
+                    name: item.dataset.name,
+                    createdDate: item.dataset.createdDate,
+                    dueDate: item.dataset.dueDate, // Stored as timestamp
+                    taskType: item.dataset.taskType,
+                    completed: item.dataset.completed,
+                    notes: normalizedNotes // Stored as JSON string
+                };
+            });
+            localStorage.setItem('tasks', JSON.stringify(tasksToSave));
+        }
+
+        function loadTasks() {
+            const storedTasks = localStorage.getItem('tasks');
+            if (storedTasks) {
+                const tasks = JSON.parse(storedTasks);
+                tasks.forEach(task => {
+                    // Re-create task item in DOM
+                    const taskItem = document.createElement('div');
+                    taskItem.classList.add('task-item');
+                    taskItem.dataset.id = task.id;
+                    taskItem.dataset.name = task.name;
+                    taskItem.dataset.createdDate = task.createdDate || task.dueDate;
+                    taskItem.dataset.dueDate = task.dueDate;
+                    taskItem.dataset.taskType = task.taskType;
+                    taskItem.dataset.completed = task.completed || 'false';
+                    taskItem.dataset.notes = normalizeNotesForStorage(task.notes);
+
+                    const dueDate = new Date(parseInt(task.dueDate));
+                    const dueMonth = (dueDate.getMonth() + 1).toString().padStart(2, '0');
+                    const dueDay = dueDate.getDate().toString().padStart(2, '0');
+                    const dueHour = dueDate.getHours().toString().padStart(2, '0');
+
+                    taskItem.innerHTML = `
+                        <div class="task-details">
+                            <h3>${task.name}</h3>
+                            <small>DUE: ${dueMonth}月${dueDay}日 ${dueHour}时</small>
+                        </div>
+                        <span class="time-left"></span>
+                    `;
+
+                    taskItem.addEventListener('click', (event) => {
+                        showTaskTooltip(taskItem, event);
+                        event.stopPropagation();
+                    });
+
+                    taskList.appendChild(taskItem);
+                });
+            }
+        }
+
+
+        function validateMonthInput() {
+            let month = parseInt(monthInput.value);
+            if (isNaN(month) || month < 1 || month > 12) {
+                alert('请输入真实的时间哦 (月份应在 1-12 之间)！');
+                monthInput.value = lastValidMonth; // Reset to last valid
+                return false;
+            }
+            lastValidMonth = month;
+            dayInput.max = getMaxDaysInMonth(month, new Date().getFullYear()); // Update max days for current month
+            validateDayInput(); // Re-validate day if month changes
+            return true;
+        }
+
+        function validateDayInput() {
+            let day = parseInt(dayInput.value);
+            const currentMonth = parseInt(monthInput.value);
+            const currentYear = new Date().getFullYear();
+            const maxDay = getMaxDaysInMonth(currentMonth, currentYear);
+
+            if (isNaN(day) || day < 1 || day > maxDay) {
+                alert(`请输入真实的时间哦 (日期应在 1-${maxDay} 之间)！`);
+                dayInput.value = lastValidDay; // Reset to last valid
+                return false;
+            }
+            lastValidDay = day;
+            return true;
+        }
+
+        function validateHourInput() {
+            let hour = parseInt(hourInput.value);
+            if (isNaN(hour) || hour < 0 || hour > 23) {
+                alert('请输入真实的时间哦 (小时应在 00-23 之间)！');
+                hourInput.value = lastValidHour; // Reset to last valid
+                hourInput.value = hourInput.value.toString().padStart(2, '0'); // Reformat after reset
+                return false;
+            }
+            lastValidHour = hour;
+            hourInput.value = hour.toString().padStart(2, '0'); // Ensure format
+            return true;
+        }
+
+        function formatHourInput() { // Renamed from formatHour to avoid confusion with validation
+            let hour = parseInt(hourInput.value);
+            if (isNaN(hour)) hour = 0; // Default to 0 if not a number
+            hourInput.value = hour.toString().padStart(2, '0');
+        }
+
+        function sortTasks(tasks) {
+            return tasks.sort((a, b) => {
+                const dueDateA = parseInt(a.dataset.dueDate);
+                const dueDateB = parseInt(b.dataset.dueDate);
+                return dueDateA - dueDateB;
+            });
+        }
+
+        function updateTaskItemDisplay(item) {
+            const dueDateTimestamp = parseInt(item.dataset.dueDate);
+            const dueDate = new Date(dueDateTimestamp);
+            const timeRemaining = calculateTimeRemaining(dueDate);
+            const timeLeftSpan = item.querySelector('.time-left');
+
+            timeLeftSpan.textContent = timeRemaining.text;
+            if (timeRemaining.overdue) {
+                timeLeftSpan.classList.add('overdue');
+            } else {
+                timeLeftSpan.classList.remove('overdue');
+            }
+
+            // Handle pink dot for notes
+            const taskDetails = item.querySelector('.task-details');
+            let pinkDot = taskDetails.querySelector('.has-notes-dot');
+
+            const taskNotes = JSON.parse(item.dataset.notes || '[]'); // Parse notes as an array
+            if (taskNotes.length > 0) { // Check if there are any notes
+                if (!pinkDot) {
+                    pinkDot = document.createElement('span');
+                    pinkDot.classList.add('has-notes-dot');
+                    pinkDot.textContent = '·';
+                    const taskNameElement = taskDetails.querySelector('h3');
+                    if (taskNameElement) {
+                        taskNameElement.appendChild(pinkDot);
+                    }
+                }
+            } else {
+                if (pinkDot) {
+                    pinkDot.remove();
+                }
+            }
+
+            // Re-attach event listener for existing items (important after re-sorting)
+            item.removeEventListener('click', showTaskTooltip); // Remove old listener first to prevent duplicates
+            item.addEventListener('click', (event) => {
+                showTaskTooltip(item, event);
+            });
+        }
+
+        function updateAllTaskTimes() {
+            const allTaskItems = Array.from(taskList.querySelectorAll('.task-item'));
+
+            let overdueTasks = [];
+            let completedTasks = [];
+            let oneTimeTasks = [];
+            let longTermTasks = [];
+            const now = new Date();
+
+            allTaskItems.forEach(item => {
+                const taskType = item.dataset.taskType;
+                const dueDate = item.dataset.dueDate ? new Date(parseInt(item.dataset.dueDate)) : null;
+                const isCompleted = item.dataset.completed === 'true';
+
+                if (isCompleted) {
+                    completedTasks.push(item);
+                } else if (dueDate && dueDate < now) {
+                    overdueTasks.push(item);
+                } else if (taskType === 'one-time') {
+                    oneTimeTasks.push(item);
+                } else if (taskType === 'longterm') {
+                    longTermTasks.push(item);
+                }
+            });
+
+            overdueTasks = sortTasks(overdueTasks);
+            completedTasks = sortTasks(completedTasks);
+            oneTimeTasks = sortTasks(oneTimeTasks);
+            longTermTasks = sortTasks(longTermTasks);
+
+            taskList.innerHTML = ''; // Clear previous task list
+
+            // --- One-time Tasks Section ---
+            if (oneTimeTasks.length > 0) {
+                const divider = document.createElement('div');
+                divider.classList.add('task-category-divider');
+                divider.innerHTML = '<span>一次性任务</span>';
+                taskList.appendChild(divider);
+            }
+            oneTimeTasks.forEach(item => {
+                updateTaskItemDisplay(item);
+                taskList.appendChild(item);
+            });
+
+            // --- Long-term Tasks Section ---
+            if (longTermTasks.length > 0) {
+                const divider = document.createElement('div');
+                divider.classList.add('task-category-divider');
+                divider.innerHTML = '<span>长期任务</span>';
+                taskList.appendChild(divider);
+            }
+            longTermTasks.forEach(item => {
+                updateTaskItemDisplay(item);
+                taskList.appendChild(item);
+            });
+
+            // --- Overdue Tasks Section ---
+            if (overdueTasks.length > 0) {
+                const divider = document.createElement('div');
+                divider.classList.add('task-category-divider');
+                divider.innerHTML = '<span>已逾期任务</span>';
+                taskList.appendChild(divider);
+            }
+            overdueTasks.forEach(item => {
+                updateTaskItemDisplay(item);
+                taskList.appendChild(item);
+            });
+
+            // --- Completed Tasks Section ---
+            if (completedTasks.length > 0) {
+                const divider = document.createElement('div');
+                divider.classList.add('task-category-divider');
+                divider.innerHTML = `<span class="completed-toggle-label">已完成任务 ${isCompletedTasksCollapsed ? '▶' : '▼'}</span>`;
+                const toggleLabel = divider.querySelector('.completed-toggle-label');
+                toggleLabel.id = 'completed-toggle-label';
+                toggleLabel.addEventListener('click', () => {
+                    isCompletedTasksCollapsed = !isCompletedTasksCollapsed;
+                    saveUiState();
+                    toggleCompletedSectionVisibility();
+                });
+                taskList.appendChild(divider);
+            }
+            const collapsedIndicator = document.createElement('div');
+            collapsedIndicator.classList.add('collapsed-completed-indicator');
+            collapsedIndicator.id = 'collapsed-completed-indicator';
+            if (!isCompletedTasksCollapsed) {
+                collapsedIndicator.classList.add('hidden');
+            }
+            collapsedIndicator.innerHTML = '';
+            taskList.appendChild(collapsedIndicator);
+
+            const completedContainer = document.createElement('div');
+            completedContainer.classList.add('completed-items-container');
+            completedContainer.id = 'completed-items-container';
+            if (isCompletedTasksCollapsed) {
+                completedContainer.classList.add('collapsed');
+            }
+            completedTasks.forEach(item => {
+                updateTaskItemDisplay(item);
+                completedContainer.appendChild(item);
+            });
+            taskList.appendChild(completedContainer);
+
+            // Keep calendar dots synced with task updates.
+            generateCalendar(currentYear, currentMonth);
+        }
+
+        function toggleCompletedSectionVisibility() {
+            const toggleLabel = document.getElementById('completed-toggle-label');
+            const collapsedIndicator = document.getElementById('collapsed-completed-indicator');
+            const completedContainer = document.getElementById('completed-items-container');
+
+            if (!toggleLabel || !collapsedIndicator || !completedContainer) {
+                updateAllTaskTimes();
+                return;
+            }
+
+            toggleLabel.textContent = `已完成任务 ${isCompletedTasksCollapsed ? '▶' : '▼'}`;
+            if (isCompletedTasksCollapsed) {
+                completedContainer.classList.add('collapsed');
+                collapsedIndicator.classList.remove('hidden');
+            } else {
+                completedContainer.classList.remove('collapsed');
+                collapsedIndicator.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Ensure modal is hidden on load
+            taskModal.style.display = 'none';
+            taskTooltip.style.display = 'none'; // Ensure tooltip is hidden on load
+            interactionModal.style.display = 'none';
+            loadStats();
+            updateCatImage();
+            updateStatDisplays();
+            loadUiState();
+            loadTasks(); // Load tasks from localStorage on page load
+            // Initial update of task times
+            updateAllTaskTimes();
+            // Update every hour (1000 ms * 60 seconds * 60 minutes)
+            setInterval(updateAllTaskTimes, 1000 * 60 * 60);
+        });
+
+        monthInput.addEventListener('change', validateMonthInput);
+        dayInput.addEventListener('change', validateDayInput);
+        hourInput.addEventListener('change', validateHourInput);
+
+        // Close tooltip if clicked outside
+        document.addEventListener('click', (event) => {
+            // Check if the click is outside the tooltip AND outside the task item
+            // that opened the tooltip.
+            const clickedInsideTooltip = taskTooltip.contains(event.target);
+            const clickedInsideTaskItem = document.querySelector(`[data-id="${currentTaskId}"]`)?.contains(event.target);
+
+            // If the tooltip is visible AND the click is neither inside the tooltip nor inside the associated task item, then close it.
+            if (taskTooltip.style.display === 'block' && !clickedInsideTooltip && !clickedInsideTaskItem) {
+                taskTooltip.style.display = 'none';
+                currentTaskId = null; // Clear currentTaskId when tooltip closes
+            }
+        });
+
+        // Only close the day-tooltip when the page itself scrolls,
+        // not when the tooltip list is scrolled.
+        document.addEventListener('scroll', (event) => {
+            if (event.target === document || event.target === document.documentElement) {
+                hideCalendarDayTooltip();
+            }
+        }, true);
+
+    </script>
 </body>
 </html>
